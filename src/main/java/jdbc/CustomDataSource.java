@@ -4,13 +4,17 @@ import javax.sql.DataSource;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.Value;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -24,12 +28,6 @@ public class CustomDataSource implements DataSource {
     private final String password;
 
     private CustomDataSource(String driver, String url, String password, String name) {
-        try {
-            Class.forName(driver);
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-
         this.driver = driver;
         this.url = url;
         this.name = name;
@@ -37,64 +35,66 @@ public class CustomDataSource implements DataSource {
     }
 
     public static CustomDataSource getInstance() {
+        if (instance != null) return instance;
 
-        if (instance == null) {
-            Properties props = new Properties();
-            ClassLoader loader = Thread.currentThread().getContextClassLoader();
-            InputStream stream = loader.getResourceAsStream("app.properties");
-            try {
-                props.load(stream);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        try {
+            Properties appProps = new Properties();
+            appProps.load(
+                    CustomDataSource.class.getClassLoader().getResourceAsStream("app.properties")
+            );
+
             instance = new CustomDataSource(
-                    props.getProperty("postgres.driver"),
-                    props.getProperty("postgres.url"),
-                    props.getProperty("postgres.password"),
-                    props.getProperty("postgres.name"));
+                    appProps.getProperty("postgres.driver"),
+                    appProps.getProperty("postgres.url"),
+                    appProps.getProperty("postgres.password"),
+                    appProps.getProperty("postgres.name")
+            );
+        } catch (IOException e){
+            e.printStackTrace();
         }
+
         return instance;
     }
 
+
     @Override
-    public Connection getConnection() throws SQLException {
-        CustomConnector connector = new CustomConnector();
-        return connector.getConnection(url, name, password);
+    public Connection getConnection(){
+        return new CustomConnector().getConnection(url, name, password);
     }
 
     @Override
-    public Connection getConnection(String username, String password) throws SQLException {
-        throw new UnsupportedOperationException();
+    public Connection getConnection(String username, String password) {
+        return new CustomConnector().getConnection(url, name, password);
     }
 
     @Override
     public PrintWriter getLogWriter() throws SQLException {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
     public void setLogWriter(PrintWriter out) throws SQLException {
-        throw new UnsupportedOperationException();
+
     }
 
     @Override
     public void setLoginTimeout(int seconds) throws SQLException {
-        throw new UnsupportedOperationException();
+
     }
 
     @Override
     public int getLoginTimeout() throws SQLException {
-        throw new UnsupportedOperationException();
+        return 0;
     }
 
     @Override
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
